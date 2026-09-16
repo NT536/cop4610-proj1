@@ -100,7 +100,7 @@ Each member records their contributions here.
 |------------|------------------------|
 | 2026-09-14 | Created the prompt in the main.c file. May move to lexer.c dependent on office hours tomorrow.  |
 | 2026-09-16 | Was unable to locate Rasheeq Ishmam in LOV006, consulting with Ryan Schmidt today. |
-| YYYY-MM-DD | [Description of task]  |
+| 2026-09-16 | After consulting with Ryan Schmidt, I have completed parts 1-3 of the base code in main.c file.  |
 
 
 
