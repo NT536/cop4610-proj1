@@ -58,7 +58,7 @@ int main() {
             //child process
             if (apply_redirection(&cmd) == -1)   //added
                 exit(1);
-            execvp(tokens->items[0], tokens->items);
+            execvp(cmd.argv[0], cmd.argv);
             perror("execvp failed");
             exit(1);
         }
