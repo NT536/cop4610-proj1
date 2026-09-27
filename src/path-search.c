@@ -1,7 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "path-search.h"
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 char *path_search(char *cmd)
 {

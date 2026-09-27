@@ -1,7 +1,14 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "main.h"
 #include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include "lexer.h"
+#include "path-search.h"
 #include "redirection.h"
 
 int main() {
