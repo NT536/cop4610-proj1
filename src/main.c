@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "redirection.h"
+#include "piping.h"
 
 int main() {
 
@@ -35,7 +36,16 @@ int main() {
                 tokens->items[i] = getenv("HOME");
             }
         } 
-        
+        // piping
+        if (has_pipe(tokens)) {
+            command cmds[MAX_CMDS];
+            int ncmds;
+            if (split_pipeline(tokens, cmds, &ncmds) == 0) {
+                run_pipeline(cmds, ncmds);
+                free_pipeline(cmds, ncmds);
+            }
+            continue;
+}
         // i/o redirection
         command cmd;
         if (parse_redirection(tokens->items, tokens->size, &cmd) == -1)
