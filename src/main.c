@@ -2,6 +2,7 @@
 #include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "redirection.h"
 
 int main() {
 
@@ -33,11 +34,23 @@ int main() {
                 //turn tilde into $HOME
                 tokens->items[i] = getenv("HOME");
             }
+        } 
+        
+        // i/o redirection
+        command cmd;
+        if (parse_redirection(tokens->items, tokens->size, &cmd) == -1)
+            continue;
+        if (cmd.infile != NULL && validate_input_file(cmd.infile) == -1) {
+            free_command(&cmd);
+            continue;
         }
+
         pid_t pid = fork();
         if(pid == 0)
         {
             //child process
+            if (apply_redirection(&cmd) == -1)   //added
+                exit(1);
             execvp(tokens->items[0], tokens->items);
             perror("execvp failed");
             exit(1);
@@ -50,6 +63,9 @@ int main() {
         {
             //parent process
             waitpid(pid, &status, 0);
+
+            //free command struct
+            free_command(&cmd);
         }
 
         free(input);
