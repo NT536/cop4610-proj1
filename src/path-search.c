@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "path-search.h"
 #include <string.h>
 #include <stdlib.h>

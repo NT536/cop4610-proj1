@@ -1,6 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "main.h"
 #include "lexer.h"
 #include "path-search.h"
+#include "redirection.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +47,15 @@ int main() {
                 //turn tilde into $HOME
                 tokens->items[i] = getenv("HOME");
             }
+        } 
+        
+        // i/o redirection
+        command cmd;
+        if (parse_redirection(tokens->items, tokens->size, &cmd) == -1)
+            continue;
+        if (cmd.infile != NULL && validate_input_file(cmd.infile) == -1) {
+            free_command(&cmd);
+            continue;
         }
         char *path = path_search(tokens->items[0]);
         pid_t pid = fork();
@@ -52,17 +64,11 @@ int main() {
         if(pid == 0)
         {
             //child process
-            if(path == NULL)
-            {
-                perror("path search failed");
+            if (apply_redirection(&cmd) == -1)   //added
                 exit(1);
-            }
-            else
-            {
-                execv(path, tokens->items);
-                perror("execv failed");
-                exit(1);
-            }
+            execvp(cmd.argv[0], cmd.argv);
+            perror("execvp failed");
+            exit(1);
         }
         else if(pid < 0)
         {
@@ -90,6 +96,9 @@ int main() {
                 cont = false;
             }
             waitpid(pid, &status, 0);
+
+            //free command struct
+            free_command(&cmd);
         }
 
         if(input != NULL)
