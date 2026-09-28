@@ -11,13 +11,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-/*
-    For Background processes, create bool variable for if command is executed as background.
-    Then, if executed as background process, the parent process should not wait for the child process to complete,
-    using the WNOHANG option with waitpid.
-    Create array to keep track of background processes.
-*/
-
 int main() {
 
     int status, jobnum = 1;
