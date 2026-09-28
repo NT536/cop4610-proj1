@@ -21,30 +21,30 @@
 
 ### Part 4: $PATH Search
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: (primarily performed by) Malachi Davey, Nathaniel Thompson
 
 ### Part 5: External Command Execution
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: Malachi Davey, (primarily performed by) Nathaniel Thompson
 
 ### Part 6: I/O Redirection
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: (primarily performed by) Malachi Davey, Nathaniel Thompson
 
 ### Part 7: Piping
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: (primarily performed by) Malachi Davey, Nathaniel Thompson
 
 ### Part 8: Background Processing
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: Malachi Davey, (primarily performed by) Nathaniel Thompson
 
 ### Part 9: Internal Command Execution
 - **Responsibilities**: [Description]
-- **Assigned to**: Malachi Davey, Nathaniel Thompson
+- **Assigned to**: Malachi Davey, (primarily performed by) Nathaniel Thompson
 
 ### Part 10: External Timeout Executable
-- **Responsibilities**: [Description]
+- **Responsibilities**: Not listed as part of project description
 - **Assigned to**: Malachi Davey, Nathaniel Thompson
 
 ### Extra Credit
@@ -59,11 +59,15 @@ shell/
 │ ├── main.c
 │ └── lexer.c
 | └── path-search.c
+| └── redirection.c
+| └── piping.c
 │
 ├── include/
 │ └── main.h
 | └── lexer.h
 | └── path-search.h
+| └── redirection.h
+| └── piping.h
 │
 ├── README.md
 └── Makefile
@@ -79,7 +83,7 @@ For a C/C++ example:
 ```bash
 make
 ```
-This will build the executable in ...
+This will build the executable in side the bin folder
 ### Execution
 ```bash
 make run
@@ -107,6 +111,7 @@ Each member records their contributions here.
 | 2026-09-23 | Testing execution with execvp(), will redo code with proper path search afterwards |
 | 2026-09-25 | Redoing external execution with execv(), following up with internal commands |
 | 2026-09-27 | Finishing testing of internals and externals. Require background processing complete before finishing execution of jobs and exit. Otherwise functional. Need to bugfix expansion of $ variables. |
+| 2026-09-28 | Finished bugfixing expansion. Only final part of project is background processing. |
 
 
 
@@ -116,7 +121,7 @@ Document in-person meetings, their purpose, and what was discussed.
 | Date       | Attendees            | Topics Discussed | Outcomes / Decisions |
 |------------|----------------------|------------------|-----------------------|
 | 2026-09-14 | Nathaniel Thompson, Malachi Davey| Discussed timeline for basic shell development | Nathaniel will have the basic shell developed by tomorrow so Malachi can start on his part of the project.  |
-| YYYY-MM-DD | [Names]              | [Agenda items]   | [Actions/Next steps]  |
+| 2026-09-28 | Nathaniel Thompson, Malachi Davey| Discussed completion of the project and known bugs  | Nathaniel Thompson will finalize the production of the background processes and then bug test. After that, the project should be finalized.  |
 
 
 
