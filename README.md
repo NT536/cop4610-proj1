@@ -57,10 +57,13 @@ shell/
 │
 ├── src/
 │ ├── main.c
-│ └── shell.c
+│ └── lexer.c
+| └── path-search.c
 │
 ├── include/
-│ └── shell.h
+│ └── main.h
+| └── lexer.h
+| └── path-search.h
 │
 ├── README.md
 └── Makefile

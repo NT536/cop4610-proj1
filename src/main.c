@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+/*
+    For Background processes, create bool variable for if command is executed as background.
+*/
+
 int main() {
 
     int status;
