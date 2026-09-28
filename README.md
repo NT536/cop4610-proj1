@@ -126,7 +126,7 @@ Document in-person meetings, their purpose, and what was discussed.
 
 
 ## Bugs
-- **Bug 1**: This is bug 1.
+- **Bug 1**: The output of the background processes when exiting the program will occasionally repeat the same line in what seems like an infinite look, but is actually waiting for the process to end.
 - **Bug 2**: This is bug 2.
 - **Bug 3**: This is bug 3.
 
