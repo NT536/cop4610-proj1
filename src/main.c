@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "path-search.h"
 #include "redirection.h"
+#include "piping.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
