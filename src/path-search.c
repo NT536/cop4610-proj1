@@ -2,12 +2,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 char *path_search(char *cmd)
 {
     if (strchr(cmd, '/') != NULL)
     {
-        return strdup(cmd);
+        char* ret = malloc(strlen(cmd) + 1);
+        strcpy(ret, cmd);
+        return ret;
     }
 
     char *path_env = getenv("PATH");
@@ -16,7 +19,8 @@ char *path_search(char *cmd)
         return NULL;
     }
 
-    char *path_copy = strdup(path_env);
+    char *path_copy = malloc(strlen(path_env) + 1);
+    strcpy(path_copy, path_env);
     char *dir = strtok(path_copy, ":");
     char full_path[1024];
 
@@ -26,7 +30,9 @@ char *path_search(char *cmd)
         if (access(full_path, X_OK) == 0)
         {
             free(path_copy);
-            return strdup(full_path);
+            char* ret2 = malloc(strlen(full_path) + 1);
+            strcpy(ret2, full_path);
+            return ret2;
         }
         dir = strtok(NULL, ":");
     }

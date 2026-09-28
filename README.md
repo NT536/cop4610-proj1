@@ -68,7 +68,7 @@ shell/
 ## How to Compile & Execute
 
 ### Requirements
-- **Compiler**: e.g., `gcc` for C/C++, `rustc` for Rust.
+- **Compiler**: gcc is the required compiler, as the work is in c.
 - **Dependencies**: List any libraries or frameworks necessary (rust only).
 
 ### Compilation
@@ -101,6 +101,9 @@ Each member records their contributions here.
 | 2026-09-14 | Created the prompt in the main.c file. May move to lexer.c dependent on office hours tomorrow.  |
 | 2026-09-16 | Was unable to locate Rasheeq Ishmam in LOV006, consulting with Ryan Schmidt today. |
 | 2026-09-16 | After consulting with Ryan Schmidt, I have completed parts 1-3 of the base code in main.c file.  |
+| 2026-09-23 | Testing execution with execvp(), will redo code with proper path search afterwards |
+| 2026-09-25 | Redoing external execution with execv(), following up with internal commands |
+| 2026-09-27 | Finishing testing of internals and externals. Require background processing complete before finishing execution of jobs and exit. Otherwise functional. Need to bugfix expansion of $ variables. |
 
 
 
