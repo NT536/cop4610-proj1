@@ -22,6 +22,10 @@ int main() {
 
     int status, jobnum = 1;
     bool cont = true, background = false;
+    char **pastcommands = malloc(3 * sizeof(char *));
+    for(int i = 0; i < 3; i++) {
+        pastcommands[i] = malloc(1);
+    }
     background_process *background_pids[10];
     for(int i = 0; i < 10; i++) {
         background_pids[i] = malloc(sizeof(background_process));
@@ -30,7 +34,7 @@ int main() {
     while(cont == true)
     {
         background = false;
-        // check for finished background processes
+        //check for finished background processes
         for(int i = 0; i < 10; i++) {
             if(background_pids[i] != NULL && background_pids[i]->active) {
                 int wstatus;
@@ -46,6 +50,14 @@ int main() {
         }
         printf("%s@%s:%s> ", getenv("USER"), getenv("MACHINE"), getcwd(NULL, 0));
         char *input = get_input();
+        //store the command
+        for(int i = 2; i > 0; i--) {
+            pastcommands[i] = realloc(pastcommands[i], strlen(pastcommands[i - 1]) + 1);
+            strcpy(pastcommands[i], pastcommands[i - 1]);
+        }
+        pastcommands[0] = realloc(pastcommands[0], strlen(input) + 1);
+        strcpy(pastcommands[0], input);
+        //get tokens
         tokenlist *tokens = get_tokens(input);
 
         for(int i = 0; i < tokens->size; i++)
@@ -74,7 +86,7 @@ int main() {
                 strcpy(tokens->items[i], copy);
             }
         } 
-        // check for background processes
+        //check for background processes
         if(tokens->size > 0 && strcmp(tokens->items[tokens->size - 1], "&") == 0) {
             background = true;
             tokens->size--; // remove the '&' from the token list
@@ -88,7 +100,7 @@ int main() {
                 free_pipeline(cmds, ncmds);
             }
             continue;
-}
+        }
         // i/o redirection
         command cmd;
         if (parse_redirection(tokens->items, tokens->size, &cmd) == -1)
@@ -148,6 +160,7 @@ int main() {
                     }
                 }
             }
+            //if background process, allow for parent to continue without waiting
             if(background) {
                 waitpid(pid, &status, WNOHANG);
             } else {
@@ -175,6 +188,12 @@ int main() {
             free(path);
         if(tokens != NULL)
             free_tokens(tokens);
+    }
+    //list out past three commands
+    for(int i = 0; i < 3; i++) {
+        if(pastcommands[i] != NULL && strlen(pastcommands[i]) > 0) {
+            printf("Past command %d: %s\n", i + 1, pastcommands[i]);
+        }
     }
     //while background processes are active, wait for them to finish
     bool finished = false;
