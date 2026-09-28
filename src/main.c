@@ -13,14 +13,37 @@
 
 /*
     For Background processes, create bool variable for if command is executed as background.
+    Then, if executed as background process, the parent process should not wait for the child process to complete,
+    using the WNOHANG option with waitpid.
+    Create array to keep track of background processes.
 */
 
 int main() {
 
-    int status;
-    bool cont = true;
+    int status, jobnum = 1;
+    bool cont = true, background = false;
+    background_process *background_pids[10];
+    for(int i = 0; i < 10; i++) {
+        background_pids[i] = malloc(sizeof(background_process));
+        background_pids[i]->active = false;
+    }
     while(cont == true)
     {
+        background = false;
+        // check for finished background processes
+        for(int i = 0; i < 10; i++) {
+            if(background_pids[i] != NULL && background_pids[i]->active) {
+                int wstatus;
+                if(waitpid(background_pids[i]->pid, &wstatus, WNOHANG)) {
+                    background_pids[i]->status = WEXITSTATUS(wstatus);
+                    background_pids[i]->active = false;
+                    jobnum--;
+                }
+                if(WIFEXITED(wstatus)) {
+                    printf("Background process %d finished with status %d\n", background_pids[i]->job, background_pids[i]->status);
+                }
+            }
+        }
         printf("%s@%s:%s> ", getenv("USER"), getenv("MACHINE"), getcwd(NULL, 0));
         char *input = get_input();
         tokenlist *tokens = get_tokens(input);
@@ -36,11 +59,8 @@ int main() {
                 strcpy(copy, tokens->items[i] + 1);
                 //reallocate enough space for getenv
                 tokens->items[i] = realloc(tokens->items[i], strlen(getenv(copy)) + 1);
-                /*there is a bug here where when later freeing the tokens, 
-                assigning tokens->items[i] to getenv(copy) causes the freeing memory
-                to abort as it's an 'invalid pointer'.
-                */
-                tokens->items[i] = getenv(copy);
+                char* ocopy = getenv(copy);
+                strcpy(tokens->items[i], ocopy);
                 tokens->items[strlen(getenv(copy))] = NULL;
                 free(copy);
             }
@@ -50,9 +70,15 @@ int main() {
                 //reallocate enough space for $HOME
                 tokens->items[i] = (char *)realloc(tokens->items[i], strlen(getenv("HOME")) + 1);
                 //turn tilde into $HOME
-                tokens->items[i] = getenv("HOME");
+                char *copy = getenv("HOME");
+                strcpy(tokens->items[i], copy);
             }
         } 
+        // check for background processes
+        if(tokens->size > 0 && strcmp(tokens->items[tokens->size - 1], "&") == 0) {
+            background = true;
+            tokens->size--; // remove the '&' from the token list
+        }
         // piping
         if (has_pipe(tokens)) {
             command cmds[MAX_CMDS];
@@ -75,13 +101,19 @@ int main() {
         pid_t pid = fork();
         char *changedir = "cd";
         char *exitcmd = "exit";
+        char *jobcmd = "jobs";
         if(pid == 0)
         {
             //child process
-            if (apply_redirection(&cmd) == -1)   //added
+            if(path == NULL)
+            {
+                perror("command not found");
                 exit(1);
-            execvp(cmd.argv[0], cmd.argv);
-            perror("execvp failed");
+            }
+            else if (apply_redirection(&cmd) == -1)   //added
+                exit(1);
+            execv(path, cmd.argv);
+            perror("execv failed");
             exit(1);
         }
         else if(pid < 0)
@@ -109,10 +141,32 @@ int main() {
             {
                 cont = false;
             }
-            waitpid(pid, &status, 0);
-
+            else if(strcmp(tokens->items[0], jobcmd) == 0 && tokens->size == 1) {
+                for(int i = 0; i < 10; i++) {
+                    if(background_pids[i] != NULL && background_pids[i]->active) {
+                        printf("Job %d: PID %d\n", background_pids[i]->job, background_pids[i]->pid);
+                    }
+                }
+            }
+            if(background) {
+                waitpid(pid, &status, WNOHANG);
+            } else {
+                waitpid(pid, &status, 0);
+            }
             //free command struct
             free_command(&cmd);
+        }
+        //add pid to background process list if it's a background process
+        if(background) {
+            for(int i = 0; i < 10; i++) {
+                if(background_pids[i] != NULL && !background_pids[i]->active) {
+                    background_pids[i]->pid = pid;
+                    background_pids[i]->active = true;
+                    background_pids[i]->status = status;
+                    background_pids[i]->job = jobnum++;
+                    break;
+                }
+            }
         }
 
         if(input != NULL)
@@ -122,6 +176,38 @@ int main() {
         if(tokens != NULL)
             free_tokens(tokens);
     }
+    //while background processes are active, wait for them to finish
+    bool finished = false;
+    while(!finished) {
+        finished = true;
+        for(int i = 0; i < 10; i++) {
+            if(background_pids[i] != NULL && background_pids[i]->active) {
+                int wstatus;
+                if(waitpid(background_pids[i]->pid, &wstatus, WNOHANG))
+                {
+                    background_pids[i]->active = false;
+                    background_pids[i]->status = wstatus;
+                }
+                if(WIFEXITED(wstatus)) {
+                    printf("Background process %d finished with status %d\n", background_pids[i]->job, background_pids[i]->status);
+                }
+            }
+        }
+        for(int i = 0; i < 10; i++) {
+            if(background_pids[i] != NULL && background_pids[i]->active) {
+                finished = false;
+            }
+        }
+    }
+
+    //free background process structs
+    for(int i = 0; i < 10; i++) {
+        if(background_pids[i] != NULL) {
+            free(background_pids[i]);
+        }
+    }
 
     return 0;
 }
+
+    
