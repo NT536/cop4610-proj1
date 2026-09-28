@@ -5,11 +5,41 @@
 #include "path-search.h"
 #include "redirection.h"
 #include "piping.h"
+#include "jobs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+
+
+// 1 = background (trailing "&" removed), 0 = foreground, -1 = misplaced '&' */
+static int strip_background(tokenlist *tokens) {
+    int n = (int)tokens->size;
+    for (int i = 0; i < n - 1; i++)
+        if (strcmp(tokens->items[i], "&") == 0)
+            return -1;
+    if (n == 0 || strcmp(tokens->items[n - 1], "&") != 0)
+        return 0;
+    free(tokens->items[n - 1]);
+    tokens->items[n - 1] = NULL;
+    tokens->size--;
+    return tokens->size == 0 ? -1 : 1;
+}
+
+// Strips the trailing '&' and surrounding whitespace from the saved command line. */
+static void trim_cmdline(char *line) {
+    char *amp = strrchr(line, '&');
+    if (amp)
+        *amp = '\0';
+    size_t n = strlen(line);
+    while (n > 0 && (line[n - 1] == ' ' || line[n - 1] == '\t' || line[n - 1] == '\n'))
+        line[--n] = '\0';
+    char *s = line;
+    while (*s == ' ' || *s == '\t')
+        s++;
+    memmove(line, s, strlen(s) + 1);
+}
 
 /*
     For Background processes, create bool variable for if command is executed as background.
@@ -21,8 +51,10 @@ int main() {
     bool cont = true;
     while(cont == true)
     {
+        check_jobs();
         printf("%s@%s:%s> ", getenv("USER"), getenv("MACHINE"), getcwd(NULL, 0));
         char *input = get_input();
+        char *cmdline = strdup(input);
         tokenlist *tokens = get_tokens(input);
 
         for(int i = 0; i < tokens->size; i++)
@@ -53,22 +85,48 @@ int main() {
                 tokens->items[i] = getenv("HOME");
             }
         } 
+        // detect &
+        int bg = strip_background(tokens);
+        if (bg == -1) {
+            fprintf(stderr, "syntax error near '&'\n");
+            free(cmdline);
+            continue;
+        }
+        if (bg == 1) {
+            if (jobs_full()) {
+                fprintf(stderr, "too many background jobs\n");
+                free(cmdline);
+                continue;
+            }
+            trim_cmdline(cmdline);
+        
+        }
         // piping
         if (has_pipe(tokens)) {
             command cmds[MAX_CMDS];
             int ncmds;
             if (split_pipeline(tokens, cmds, &ncmds) == 0) {
-                run_pipeline(cmds, ncmds);
+                pid_t pids[MAX_CMDS];
+                int n = run_pipeline(cmds, ncmds, bg, pids);
+                if (bg && n > 0) {
+                    add_job(pids, n, cmdline);
+                    cmdline = NULL;              /* job table owns it now */
+                }
                 free_pipeline(cmds, ncmds);
             }
+            free(cmdline);
             continue;
-}
+        }
+
         // i/o redirection
         command cmd;
-        if (parse_redirection(tokens->items, tokens->size, &cmd) == -1)
+        if (parse_redirection(tokens->items, tokens->size, &cmd) == -1) {
+            free(cmdline);
             continue;
+        }
         if (cmd.infile != NULL && validate_input_file(cmd.infile) == -1) {
             free_command(&cmd);
+            free(cmdline);
             continue;
         }
         char *path = path_search(tokens->items[0]);
@@ -109,7 +167,12 @@ int main() {
             {
                 cont = false;
             }
-            waitpid(pid, &status, 0);
+           if (bg) {
+                add_job(&pid, 1, cmdline);
+                cmdline = NULL;                      // job table owns it now 
+            } else {
+                waitpid(pid, &status, 0);
+            }
 
             //free command struct
             free_command(&cmd);
@@ -121,6 +184,7 @@ int main() {
             free(path);
         if(tokens != NULL)
             free_tokens(tokens);
+        free(cmdline);
     }
 
     return 0;

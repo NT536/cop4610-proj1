@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "piping.h"
-#include "path-search.h"  
+#include "path-search.h"
+
+
 int has_pipe(tokenlist *tokens) {
     for (int i = 0; i < tokens->size; i++)
         if (strcmp(tokens->items[i], "|") == 0)
@@ -60,64 +62,95 @@ static void close_all(int pipes[][2], int npipes) {
     }
 }
 
-void run_pipeline(command cmds[], int ncmds) {
+// Runs a pipeline of ncmds commands.
+// Foreground: waits for every child.
+// Background: returns without waiting and copies child PIDs into pids_out.
+// Returns ncmds on success, -1 if nothing was run.
+
+int run_pipeline(command *cmds, int ncmds, int background, pid_t *pids_out) {
     char *paths[MAX_CMDS] = {0};
-    int   pipes[MAX_CMDS - 1][2];
+    int pipes[MAX_CMDS - 1][2];
     pid_t pids[MAX_CMDS];
-    int   npipes = ncmds - 1;
-    int   started = 0;
 
-    // 1. Validate and resolve everything before creating any pipes or children 
-    if (cmds[0].infile && validate_input_file(cmds[0].infile) == -1)
-        return;
+    // input file only allowed on first command 
+    if (cmds[0].infile != NULL && validate_input_file(cmds[0].infile) == -1)
+        return -1;
 
+    // resolve every command before creating anything
     for (int i = 0; i < ncmds; i++) {
         paths[i] = path_search(cmds[i].argv[0]);
-        if (!paths[i]) {
+        if (paths[i] == NULL) {
             fprintf(stderr, "%s: command not found\n", cmds[i].argv[0]);
-            goto cleanup;
+            for (int k = 0; k < i; k++)
+                free(paths[k]);
+            return -1;
         }
     }
 
-    // 2. Create all pipes up front so every child inherits them
-    for (int i = 0; i < npipes; i++) {
+    // create all pipes
+    for (int i = 0; i < ncmds - 1; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("pipe");
-            close_all(pipes, i);   /* close only the ones already opened */
-            goto cleanup;
+            for (int k = 0; k < i; k++) {
+                close(pipes[k][0]);
+                close(pipes[k][1]);
+            }
+            for (int k = 0; k < ncmds; k++)
+                free(paths[k]);
+            return -1;
         }
     }
 
-    // 3. One child per command
+    // fork one child per command
+    int started = 0;
     for (int i = 0; i < ncmds; i++) {
         pids[i] = fork();
-        if (pids[i] == -1) {
-            perror("fork");
-            break;
-        }
         if (pids[i] == 0) {
-            if (i > 0)      dup2(pipes[i - 1][0], STDIN_FILENO);   /* read from previous */
-            if (i < npipes) dup2(pipes[i][1],     STDOUT_FILENO);  /* write to next */
-            close_all(pipes, npipes);   /* MUST close originals or readers never see EOF */
-
-            /* File redirects applied after pipes so they override (extra credit) */
-            /* CHECK: assumes apply_redirection returns -1 on failure */
-            if (apply_redirection(&cmds[i]) == -1)
-                _exit(1);
-
+            if (i > 0)
+                dup2(pipes[i - 1][0], STDIN_FILENO);
+            if (i < ncmds - 1)
+                dup2(pipes[i][1], STDOUT_FILENO);
+            for (int k = 0; k < ncmds - 1; k++) {
+                close(pipes[k][0]);
+                close(pipes[k][1]);
+            }
+            if (apply_redirection(&cmds[i]) == -1)   // after pipe dup2s
+                exit(1);
             execv(paths[i], cmds[i].argv);
             perror("execv");
-            _exit(1);
+            exit(1);
+        } else if (pids[i] < 0) {
+            perror("fork");
+            break;
         }
         started++;
     }
 
-    // 4. Parent closes every pipe end, then waits for every child
-    close_all(pipes, npipes);
-    for (int i = 0; i < started; i++)
-        waitpid(pids[i], NULL, 0);
+    // parent closes every pipe end
+    for (int k = 0; k < ncmds - 1; k++) {
+        close(pipes[k][0]);
+        close(pipes[k][1]);
+    }
 
-cleanup:
-    for (int i = 0; i < ncmds; i++)
-        free(paths[i]);
+    if (started < ncmds) {
+        // a fork failed: clean up what did start, don't make a job
+        for (int i = 0; i < started; i++)
+            waitpid(pids[i], NULL, 0);
+        for (int k = 0; k < ncmds; k++)
+            free(paths[k]);
+        return -1;
+    }
+
+    if (background) {
+        for (int i = 0; i < ncmds; i++)
+            pids_out[i] = pids[i];
+    } else {
+        for (int i = 0; i < ncmds; i++)
+            waitpid(pids[i], NULL, 0);        // specific PIDs only
+    }
+
+    for (int k = 0; k < ncmds; k++)
+        free(paths[k]);
+    return ncmds;
 }
+
