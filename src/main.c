@@ -204,6 +204,7 @@ int main() {
                     printf("Background process %d finished with status %d\n", background_pids[i]->job, background_pids[i]->status);
                 }
             }
+            sleep(1);
         }
         for(int i = 0; i < 10; i++) {
             if(background_pids[i] != NULL && background_pids[i]->active) {
